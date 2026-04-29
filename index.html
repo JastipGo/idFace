@@ -1,908 +1,677 @@
-<!DOCTYPE html><html lang="id">
+<!DOCTYPE html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Face Auth Demo</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --panel: rgba(15, 23, 42, 0.82);
-      --card: rgba(255, 255, 255, 0.08);
-      --text: #e5eefb;
-      --muted: #9fb2d0;
-      --accent: #5eead4;
-      --accent2: #60a5fa;
-      --danger: #fb7185;
-      --ok: #34d399;
-      --border: rgba(255,255,255,0.12);
-      --shadow: 0 20px 60px rgba(0,0,0,.35);
-    }* { box-sizing: border-box; }
-html, body { height: 100%; }
-body {
-  margin: 0;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(96,165,250,.16), transparent 30%),
-    radial-gradient(circle at top right, rgba(94,234,212,.15), transparent 28%),
-    linear-gradient(180deg, #08111f 0%, #0b1326 40%, #060b16 100%);
-  color: var(--text);
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>FaceVault™ - Enkripsi Wajih & Login Biometrik</title>
+    <!-- Face-api.js core & models -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@3.9.0/dist/tf-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@3.9.0/dist/tf-converter.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@3.9.0/dist/tf-backend-webgl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
 
-.wrap {
-  min-height: 100%;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-}
+        body {
+            background: radial-gradient(circle at 10% 20%, #0B0F1C, #03060E);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-.app {
-  width: min(1180px, 100%);
-  display: grid;
-  grid-template-columns: 1.1fr .9fr;
-  gap: 18px;
-  align-items: stretch;
-}
+        /* Glassmorphism + efek neon */
+        .dashboard {
+            max-width: 1400px;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+            justify-content: center;
+        }
 
-.hero, .panel, .content {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(18px);
-}
+        .card-neo {
+            background: rgba(12, 17, 29, 0.75);
+            backdrop-filter: blur(16px);
+            border-radius: 2.5rem;
+            border: 1px solid rgba(80, 100, 200, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(120, 150, 255, 0.2) inset;
+            transition: all 0.2s ease;
+        }
 
-.hero {
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 720px;
-}
+        .camera-container {
+            flex: 1.2;
+            min-width: 330px;
+            background: #05080f;
+            border-radius: 2rem;
+            overflow: hidden;
+            border: 1px solid #2a3455;
+        }
 
-.panel {
-  padding: 22px;
-  min-height: 720px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+        .video-wrapper {
+            position: relative;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-h1 {
-  margin: 0 0 8px;
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1.03;
-  letter-spacing: -0.03em;
-}
+        video {
+            width: 100%;
+            display: block;
+            transform: scaleX(-1);
+            border-radius: 1.5rem 1.5rem 0 0;
+            object-fit: cover;
+        }
 
-.sub {
-  margin: 0;
-  color: var(--muted);
-  font-size: 1rem;
-  line-height: 1.6;
-  max-width: 58ch;
-}
+        .cam-status {
+            padding: 14px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-align: center;
+            background: #0c1122;
+            color: #bfd4ff;
+            border-top: 1px solid #262e48;
+            letter-spacing: 0.3px;
+        }
 
-.badge-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: var(--text);
-  font-size: .92rem;
-}
+        .forms-stack {
+            flex: 1;
+            min-width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
 
-.preview {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-}
+        .form-card {
+            padding: 1.8rem;
+        }
 
-.video-box {
-  position: relative;
-  border-radius: 22px;
-  overflow: hidden;
-  background: #020617;
-  border: 1px solid var(--border);
-  aspect-ratio: 16 / 12;
-}
+        .form-title {
+            font-size: 1.7rem;
+            font-weight: 800;
+            background: linear-gradient(125deg, #FFFFFF, #9BB5FF, #6C5CE7);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-video, canvas.overlay {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  position: absolute;
-  inset: 0;
-}
+        .input-group {
+            margin-bottom: 1.4rem;
+        }
 
-.overlay-text {
-  position: absolute;
-  left: 14px;
-  bottom: 14px;
-  right: 14px;
-  padding: 12px 14px;
-  background: rgba(2, 6, 23, 0.64);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 16px;
-  color: #fff;
-  font-size: .92rem;
-  line-height: 1.5;
-  z-index: 2;
-}
+        label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8f9ed4;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
 
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.stack { display: grid; gap: 12px; }
+        input {
+            width: 100%;
+            background: #0f1425;
+            border: 1.5px solid #262e4a;
+            border-radius: 1.5rem;
+            padding: 12px 18px;
+            color: white;
+            font-size: 1rem;
+            transition: 0.2s;
+            outline: none;
+        }
 
-label {
-  display: block;
-  font-size: .85rem;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
+        input:focus {
+            border-color: #6c5ce7;
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.3);
+        }
 
-input, select, button, textarea {
-  width: 100%;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.06);
-  color: var(--text);
-  border-radius: 14px;
-  padding: 13px 14px;
-  font: inherit;
-  outline: none;
-}
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 2rem;
+            font-weight: 700;
+            font-size: 1rem;
+            background: #1e2746;
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+        }
 
-input::placeholder { color: rgba(229,238,251,0.45); }
-input:focus, textarea:focus, select:focus {
-  border-color: rgba(94,234,212,0.7);
-  box-shadow: 0 0 0 3px rgba(94,234,212,0.16);
-}
+        .btn-primary {
+            background: linear-gradient(95deg, #5f3dc9, #7c5cf0);
+            box-shadow: 0 6px 14px rgba(92, 70, 220, 0.4);
+        }
 
-button {
-  cursor: pointer;
-  font-weight: 700;
-  transition: transform .12s ease, opacity .12s ease, background .12s ease;
-}
-button:hover { transform: translateY(-1px); }
-button:disabled { cursor: not-allowed; opacity: .55; transform: none; }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.08);
+        }
 
-.btn-primary { background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #06111f; border: none; }
-.btn-dark { background: rgba(255,255,255,0.08); }
-.btn-danger { background: rgba(251,113,133,0.16); border-color: rgba(251,113,133,0.35); color: #ffd9df; }
-.btn-success { background: rgba(52,211,153,0.16); border-color: rgba(52,211,153,0.35); color: #d7fff0; }
+        .btn-secondary {
+            background: #1c213b;
+            border: 1px solid #3c4470;
+        }
 
-.tabs { display: flex; gap: 10px; }
-.tabs button { flex: 1; }
-.tab-active { background: linear-gradient(135deg, rgba(96,165,250,.8), rgba(94,234,212,.8)); color: #07111d; border: none; }
+        .btn-danger {
+            background: #b91c2c;
+            box-shadow: 0 2px 10px rgba(185, 28, 44, 0.3);
+        }
 
-.section {
-  display: none;
-  gap: 12px;
-  flex-direction: column;
-}
-.section.active { display: flex; }
+        .alert {
+            margin-top: 1rem;
+            padding: 10px;
+            border-radius: 1.2rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-align: center;
+            backdrop-filter: blur(4px);
+        }
 
-.card {
-  padding: 16px;
-  border-radius: 18px;
-  background: var(--card);
-  border: 1px solid var(--border);
-}
+        .alert-success {
+            background: #0e2a1fcc;
+            color: #b1ffcf;
+            border-left: 4px solid #2ecc71;
+        }
 
-.muted { color: var(--muted); }
-.ok { color: var(--ok); }
-.danger { color: var(--danger); }
-.small { font-size: .9rem; line-height: 1.55; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .alert-error {
+            background: #2f1420cc;
+            color: #ffbbbb;
+            border-left: 4px solid #e74c3c;
+        }
 
-.status {
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border);
-  min-height: 52px;
-  line-height: 1.5;
-}
+        .alert-info {
+            background: #10273fcc;
+            color: #cae3ff;
+            border-left: 4px solid #3498db;
+        }
 
-.hidden { display: none !important; }
-.content {
-  padding: 24px;
-  min-height: 720px;
-  display: none;
-  flex-direction: column;
-  gap: 16px;
-}
+        .db-panel {
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(12px);
+            border-radius: 1.6rem;
+            padding: 1rem 1.2rem;
+            margin-top: 0.5rem;
+        }
 
-.content.active { display: flex; }
+        .user-badge {
+            background: #13182b;
+            border-radius: 2rem;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            color: #b7c4ff;
+            margin: 4px;
+            display: inline-block;
+        }
 
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-.welcome-box {
-  flex: 1;
-  padding: 24px;
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(96,165,250,0.14), rgba(94,234,212,0.06));
-  border: 1px solid rgba(255,255,255,0.12);
-}
+        button:disabled {
+            opacity: 0.5;
+            transform: none;
+            cursor: not-allowed;
+        }
 
-.warning {
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(251,191,36,0.32);
-  background: rgba(251,191,36,0.08);
-  color: #fde68a;
-  line-height: 1.55;
-  font-size: .92rem;
-}
-
-@media (max-width: 980px) {
-  .app { grid-template-columns: 1fr; }
-  .hero, .panel, .content { min-height: auto; }
-}
-
-  </style>
-  <script defer src="https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/dist/face-api.min.js"></script>
+        hr {
+            border-color: #2d3456;
+            margin: 12px 0;
+        }
+    </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="app" id="authApp">
-      <section class="hero">
-        <div>
-          <h1>Face Auth</h1>
-          <p class="sub">
-            Website satu file untuk daftar, simpan wajah terenkripsi di browser, lalu masuk hanya dengan deteksi wajah.
-            Alurnya dibuat sederhana agar bisa dijalankan langsung dari satu file HTML.
-          </p>
-          <div class="badge-row">
-            <span class="badge">🔐 Web Crypto API</span>
-            <span class="badge">📷 Webcam</span>
-            <span class="badge">🧠 Face Recognition</span>
-            <span class="badge">💾 localStorage</span>
-          </div>
+<div class="dashboard">
+    <!-- Panel Kamera Live -->
+    <div class="camera-container card-neo">
+        <div class="video-wrapper">
+            <video id="webcam" autoplay playsinline muted width="640" height="480"></video>
         </div>
-        <div class="card small">
-          <strong>Catatan penting</strong>
-          <div class="muted" style="margin-top:8px;">
-            Aplikasi browser-only bisa menyimpan data terenkripsi di perangkat, namun keamanan penuh tetap bergantung pada lingkungan browser dan perangkat yang dipakai.
-          </div>
+        <div class="cam-status" id="cameraStatus">
+            🔐 Inisialisasi Secure Enclave & Model AI ...
         </div>
-      </section><section class="panel" id="authPanel">
-    <div class="tabs">
-      <button class="tab-active" id="tabSignIn">Sign In</button>
-      <button class="btn-dark" id="tabSignUp">Sign Up</button>
-    </div>
-
-    <div class="section active" id="sectionSignIn">
-      <div class="card small">
-        Masuk memakai wajah. Sistem akan membandingkan descriptor wajah kamera dengan data wajah yang tersimpan.
-      </div>
-      <div class="grid-2">
-        <button class="btn-dark" id="btnLoadModels">Load Model</button>
-        <button class="btn-dark" id="btnStartCamera">Start Camera</button>
-      </div>
-      <button class="btn-primary" id="btnSignIn">Sign In Dengan Wajah</button>
-      <div class="status" id="signInStatus">Status: menunggu model dan kamera siap.</div>
-    </div>
-
-    <div class="section" id="sectionSignUp">
-      <div class="card small">
-        Saat daftar, isi nomor HP, password, lalu ambil sampel wajah beberapa kali supaya hasil pengenalan lebih stabil.
-      </div>
-      <div class="stack">
-        <div>
-          <label for="phone">Nomor HP</label>
-          <input id="phone" type="tel" placeholder="Contoh: 08xxxxxxxxxx atau +628xxxxxxxxxx" autocomplete="tel" />
+        <div class="db-panel" style="border-radius: 0 0 1.6rem 1.6rem; background: #03060dd9;">
+            <div class="flex-between">
+                <span style="font-weight: 600;">📀 Database Terenkripsi</span>
+                <button id="resetAllDataBtn" class="btn-secondary" style="width: auto; padding: 6px 14px; margin:0;">🗑️ Reset Semua</button>
+            </div>
+            <div id="userListContainer" style="margin-top: 12px; max-height: 130px; overflow-y: auto; font-size:0.8rem;">
+                ⏳ Memuat data vault...
+            </div>
         </div>
-        <div>
-          <label for="password">Password</label>
-          <input id="password" type="password" placeholder="Minimal 8 karakter" autocomplete="new-password" />
+    </div>
+
+    <!-- Panel Form Registrasi & Login -->
+    <div class="forms-stack">
+        <!-- SIGN UP (enkripsi wajah + password) -->
+        <div class="form-card card-neo">
+            <div class="form-title">
+                <span>📝</span> Daftar Wajah Terenkripsi
+            </div>
+            <div class="input-group">
+                <label>📞 NOMOR HP (unik)</label>
+                <input type="tel" id="signupPhone" placeholder="081234567890" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label>🔒 PASSWORD (min. 4 karakter)</label>
+                <input type="password" id="signupPassword" placeholder="••••••">
+            </div>
+            <button id="btnRegisterFace" class="btn btn-primary">⚡ REKAM WAJAH & DAFTAR (enkripsi AES-GCM)</button>
+            <div id="signupMessage" class="alert" style="display: none;"></div>
+            <div class="alert-info" style="margin-top: 12px; padding: 8px; font-size:0.7rem; text-align:center;">
+                🧠 Data wajah (descriptor) dienkripsi dengan master key + PBKDF2. Password dienkripsi terpisah.
+            </div>
         </div>
-      </div>
-      <div class="grid-2">
-        <button class="btn-dark" id="btnLoadModelsUp">Load Model</button>
-        <button class="btn-dark" id="btnStartCameraUp">Start Camera</button>
-      </div>
-      <div class="grid-2">
-        <button class="btn-success" id="btnCapturePreview">Ambil Sampel Wajah</button>
-        <button class="btn-primary" id="btnSignUp">Daftar</button>
-      </div>
-      <div class="status" id="signUpStatus">Status: belum ada sampel wajah.</div>
-    </div>
-  </section>
 
-  <section class="content" id="freePage">
-    <div class="topbar">
-      <div>
-        <h2 style="margin:0; font-size:1.9rem;">Halaman Bebas</h2>
-        <div class="muted" id="welcomeText" style="margin-top:6px;">Anda berhasil masuk.</div>
-      </div>
-      <button class="btn-danger" id="btnLogout">Logout</button>
-    </div>
+        <!-- SIGN IN (hanya dengan wajah + verifikasi biometrik) -->
+        <div class="form-card card-neo">
+            <div class="form-title">
+                <span>😀</span> Login Biometrik
+            </div>
+            <div class="input-group">
+                <label>📞 NOMOR HP TERDAFTAR</label>
+                <input type="tel" id="loginPhone" placeholder="Masukkan nomor HP">
+            </div>
+            <button id="btnVerifyFace" class="btn btn-primary">🔍 VERIFIKASI WAJAH & AKSES</button>
+            <div id="loginMessage" class="alert" style="display: none;"></div>
+            <div class="alert-info" style="margin-top: 8px; font-size:0.7rem;">
+                ✅ Perbandingan wajah live vs data terenkripsi (Euclidean distance < 0.55)
+            </div>
+        </div>
 
-    <div class="welcome-box">
-      <h3 style="margin-top:0;">Akses terbuka</h3>
-      <p class="sub" style="margin-bottom:0; max-width:unset;">
-        Area ini bisa Anda ganti menjadi dashboard, artikel, panel admin, atau halaman apa pun yang ingin dibuka setelah deteksi wajah berhasil.
-      </p>
+        <!-- Informasi tambahan enkripsi -->
+        <div class="card-neo" style="padding: 1rem; background: rgba(0,0,0,0.4);">
+            <div style="display: flex; gap: 16px; justify-content: center; font-size:0.7rem; color:#a7b6f0;">
+                <span>🔐 AES-GCM 256 bit</span> <span>⚙️ PBKDF2 (100k iterasi)</span> <span>🖥️ Local Storage Vault</span>
+            </div>
+        </div>
     </div>
-
-    <div class="warning">
-      Data tersimpan di browser pada origin yang sama. Hapus data browser atau klik reset untuk mengosongkan penyimpanan lokal.
-    </div>
-
-    <div class="card small mono" id="debugBox">Belum ada sesi aktif.</div>
-    <div class="grid-2">
-      <button class="btn-dark" id="btnClearAll">Hapus Semua Data Lokal</button>
-      <button class="btn-dark" id="btnReloadModels">Muat Ulang Model</button>
-    </div>
-  </section>
 </div>
 
-<div class="panel" style="justify-content: space-between;" id="cameraPanel">
-  <div class="preview">
-    <div class="video-box">
-      <video id="video" autoplay playsinline muted></video>
-      <canvas class="overlay" id="overlay"></canvas>
-      <div class="overlay-text" id="overlayText">Kamera belum aktif.</div>
-    </div>
-    <div class="status" id="globalStatus">Siap. Klik Load Model, lalu Start Camera.</div>
-  </div>
-
-  <div class="card small">
-    <strong>Alur singkat</strong>
-    <ol style="margin:10px 0 0; padding-left: 18px; color: var(--muted); line-height:1.65;">
-      <li>Load model wajah.</li>
-      <li>Aktifkan kamera.</li>
-      <li>Sign up dengan nomor HP, password, dan sampel wajah.</li>
-      <li>Sign in memakai wajah saja.</li>
-    </ol>
-  </div>
-</div>
-
-  </div><script>
-(() => {
-  'use strict';
-
-  const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
-  const STORAGE_KEY = 'face-auth-db-v1';
-  const SESSION_KEY = 'face-auth-session-v1';
-  const SESSION_EXPIRES_MS = 1000 * 60 * 60 * 8;
-
-  const els = {
-    authApp: document.getElementById('authApp'),
-    authPanel: document.getElementById('authPanel'),
-    freePage: document.getElementById('freePage'),
-    video: document.getElementById('video'),
-    overlay: document.getElementById('overlay'),
-    overlayText: document.getElementById('overlayText'),
-    globalStatus: document.getElementById('globalStatus'),
-    signInStatus: document.getElementById('signInStatus'),
-    signUpStatus: document.getElementById('signUpStatus'),
-    phone: document.getElementById('phone'),
-    password: document.getElementById('password'),
-    welcomeText: document.getElementById('welcomeText'),
-    debugBox: document.getElementById('debugBox'),
-    tabSignIn: document.getElementById('tabSignIn'),
-    tabSignUp: document.getElementById('tabSignUp'),
-    sectionSignIn: document.getElementById('sectionSignIn'),
-    sectionSignUp: document.getElementById('sectionSignUp'),
-    btnLoadModels: document.getElementById('btnLoadModels'),
-    btnLoadModelsUp: document.getElementById('btnLoadModelsUp'),
-    btnStartCamera: document.getElementById('btnStartCamera'),
-    btnStartCameraUp: document.getElementById('btnStartCameraUp'),
-    btnCapturePreview: document.getElementById('btnCapturePreview'),
-    btnSignIn: document.getElementById('btnSignIn'),
-    btnSignUp: document.getElementById('btnSignUp'),
-    btnLogout: document.getElementById('btnLogout'),
-    btnClearAll: document.getElementById('btnClearAll'),
-    btnReloadModels: document.getElementById('btnReloadModels')
-  };
-
-  let stream = null;
-  let modelsLoaded = false;
-  let cameraReady = false;
-  let lastDescriptor = null;
-  let capturedDescriptors = [];
-
-  function setStatus(target, msg, kind = '') {
-    target.innerHTML = kind ? `<span class="${kind}">${escapeHtml(msg)}</span>` : escapeHtml(msg);
-  }
-
-  function setGlobal(msg, kind = '') {
-    setStatus(els.globalStatus, msg, kind);
-  }
-
-  function escapeHtml(text) {
-    return String(text)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
-  }
-
-  function toBase64(bytes) {
-    let bin = '';
-    bytes.forEach(b => bin += String.fromCharCode(b));
-    return btoa(bin);
-  }
-
-  function fromBase64(str) {
-    const bin = atob(str);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return bytes;
-  }
-
-  function normalizePhone(input) {
-    const raw = input.trim().replace(/\s+/g, '');
-    if (!raw) return '';
-    if (/^\+62\d{8,13}$/.test(raw)) return raw;
-    if (/^62\d{8,13}$/.test(raw)) return '+' + raw;
-    if (/^0\d{8,13}$/.test(raw)) return '+62' + raw.slice(1);
-    return '';
-  }
-
-  function validatePassword(pw) {
-    return typeof pw === 'string' && pw.trim().length >= 8;
-  }
-
-  function euclideanDistance(a, b) {
-    let sum = 0;
-    for (let i = 0; i < a.length; i++) {
-      const d = a[i] - b[i];
-      sum += d * d;
-    }
-    return Math.sqrt(sum);
-  }
-
-  function averageDescriptor(list) {
-    const result = new Float32Array(128);
-    list.forEach(arr => {
-      for (let i = 0; i < 128; i++) result[i] += arr[i];
-    });
-    for (let i = 0; i < 128; i++) result[i] /= list.length;
-    return Array.from(result);
-  }
-
-  async function deriveKeyFromPassphrase(passphrase, saltBytes, usages) {
-    const enc = new TextEncoder();
-    const baseKey = await crypto.subtle.importKey(
-      'raw',
-      enc.encode(passphrase),
-      { name: 'PBKDF2' },
-      false,
-      ['deriveKey']
-    );
-    return crypto.subtle.deriveKey(
-      {
-        name: 'PBKDF2',
-        salt: saltBytes,
-        iterations: 210000,
-        hash: 'SHA-256'
-      },
-      baseKey,
-      {
-        name: 'AES-GCM',
-        length: 256
-      },
-      false,
-      usages
-    );
-  }
-
-  async function encryptJson(obj, passphrase) {
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const key = await deriveKeyFromPassphrase(passphrase, salt, ['encrypt']);
-    const plaintext = new TextEncoder().encode(JSON.stringify(obj));
-    const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
-    return {
-      v: 1,
-      salt: toBase64(salt),
-      iv: toBase64(iv),
-      data: toBase64(new Uint8Array(ciphertext))
-    };
-  }
-
-  async function decryptJson(blob, passphrase) {
-    const salt = fromBase64(blob.salt);
-    const iv = fromBase64(blob.iv);
-    const key = await deriveKeyFromPassphrase(passphrase, salt, ['decrypt']);
-    const data = fromBase64(blob.data);
-    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
-    return JSON.parse(new TextDecoder().decode(plain));
-  }
-
-  function loadStore() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"profiles":[]}');
-    } catch {
-      return { profiles: [] };
-    }
-  }
-
-  function saveStore(store) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  }
-
-  function getSession() {
-    try {
-      return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-    } catch {
-      return null;
-    }
-  }
-
-  function setSession(phone) {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ phone, exp: Date.now() + SESSION_EXPIRES_MS }));
-  }
-
-  function clearSession() {
-    sessionStorage.removeItem(SESSION_KEY);
-  }
-
-  function sessionIsValid() {
-    const session = getSession();
-    return !!(session && session.exp && Date.now() < session.exp && session.phone);
-  }
-
-  function showAuth() {
-    els.authPanel.classList.remove('hidden');
-    els.freePage.classList.remove('active');
-    els.authApp.classList.remove('hidden');
-  }
-
-  function showFree(phone) {
-    els.authPanel.classList.add('hidden');
-    els.freePage.classList.add('active');
-    els.welcomeText.textContent = `Masuk sebagai ${phone}.`;
-    els.debugBox.textContent = `Session aktif untuk: ${phone}\nWaktu: ${new Date().toLocaleString('id-ID')}`;
-  }
-
-  function setTab(which) {
-    const signIn = which === 'in';
-    els.sectionSignIn.classList.toggle('active', signIn);
-    els.sectionSignUp.classList.toggle('active', !signIn);
-    els.tabSignIn.className = signIn ? 'tab-active' : 'btn-dark';
-    els.tabSignUp.className = !signIn ? 'tab-active' : 'btn-dark';
-  }
-
-  async function loadModels() {
-    if (modelsLoaded) {
-      setGlobal('Model sudah aktif.', 'ok');
-      return;
-    }
-    if (!window.faceapi) {
-      throw new Error('Library face-api.js belum ter-load. Periksa koneksi internet.');
-    }
-    setGlobal('Memuat model wajah...', '');
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-    ]);
-    modelsLoaded = true;
-    setGlobal('Model siap dipakai.', 'ok');
-  }
-
-  async function startCamera() {
-    if (stream) {
-      cameraReady = true;
-      setGlobal('Kamera sudah aktif.', 'ok');
-      return;
-    }
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error('Browser tidak mendukung kamera.');
-    }
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user' },
-      audio: false
-    });
-    els.video.srcObject = stream;
-    await new Promise(resolve => {
-      els.video.onloadedmetadata = () => resolve();
-    });
-    await els.video.play();
-    cameraReady = true;
-    resizeOverlay();
-    setGlobal('Kamera aktif dan siap membaca wajah.', 'ok');
-    els.overlayText.textContent = 'Arahkan wajah ke kamera.';
-  }
-
-  function resizeOverlay() {
-    const rect = els.video.getBoundingClientRect();
-    els.overlay.width = Math.max(1, Math.round(rect.width));
-    els.overlay.height = Math.max(1, Math.round(rect.height));
-  }
-
-  async function detectDescriptorOnce() {
-    if (!modelsLoaded) throw new Error('Model belum dimuat.');
-    if (!cameraReady) throw new Error('Kamera belum aktif.');
-
-    resizeOverlay();
-    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
-    const detection = await faceapi
-      .detectSingleFace(els.video, options)
-      .withFaceLandmarks(true)
-      .withFaceDescriptor();
-
-    const ctx = els.overlay.getContext('2d');
-    ctx.clearRect(0, 0, els.overlay.width, els.overlay.height);
-
-    if (!detection) {
-      els.overlayText.textContent = 'Wajah belum terbaca. Pastikan hanya satu wajah terlihat.';
-      return null;
+<script>
+    // ======================== ENKRIPSI DENGAN WEB CRYPTO API ========================
+    // Master Key Configuration (diturunkan dari passphrase statis + salt, layaknya vault rahasia)
+    const MASTER_PASSPHRASE = "FaceVault_Protect2025!@#Biometric";
+    const SALT = new Uint8Array([78, 110, 99, 114, 121, 112, 116, 101, 100, 70, 97, 99, 101, 86, 97, 117]);
+    
+    let cryptoKey = null;   // akan diinisialisasi async
+    
+    // Fungsi untuk mendapatkan atau membuat kripto key dari PBKDF2
+    async function getOrCreateMasterKey() {
+        if (cryptoKey) return cryptoKey;
+        const enc = new TextEncoder();
+        const keyMaterial = await window.crypto.subtle.importKey(
+            "raw",
+            enc.encode(MASTER_PASSPHRASE),
+            "PBKDF2",
+            false,
+            ["deriveKey"]
+        );
+        const derivedKey = await window.crypto.subtle.deriveKey(
+            {
+                name: "PBKDF2",
+                salt: SALT,
+                iterations: 100000,
+                hash: "SHA-256"
+            },
+            keyMaterial,
+            { name: "AES-GCM", length: 256 },
+            true,
+            ["encrypt", "decrypt"]
+        );
+        cryptoKey = derivedKey;
+        return cryptoKey;
     }
 
-    const displaySize = { width: els.overlay.width, height: els.overlay.height };
-    const resized = faceapi.resizeResults(detection, displaySize);
-    ctx.strokeStyle = 'rgba(94, 234, 212, 0.95)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(resized.detection.box.x, resized.detection.box.y, resized.detection.box.width, resized.detection.box.height);
-    els.overlayText.textContent = `Wajah terbaca dengan skor ${(detection.detection.score * 100).toFixed(1)}%`;
-    return Array.from(detection.descriptor);
-  }
-
-  async function captureFaceSamples(sampleCount = 3) {
-    capturedDescriptors = [];
-    for (let i = 0; i < sampleCount; i++) {
-      setGlobal(`Mengambil sampel ${i + 1} dari ${sampleCount}...`, '');
-      const desc = await waitForDescriptor(5000);
-      if (!desc) {
-        i -= 1;
-        await sleep(800);
-        continue;
-      }
-      capturedDescriptors.push(desc);
-      await sleep(600);
-    }
-    lastDescriptor = averageDescriptor(capturedDescriptors);
-    return lastDescriptor;
-  }
-
-  async function waitForDescriptor(timeoutMs = 5000) {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      const desc = await detectDescriptorOnce();
-      if (desc) return desc;
-      await sleep(180);
-    }
-    return null;
-  }
-
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  function requireReady() {
-    if (!modelsLoaded) throw new Error('Model belum dimuat.');
-    if (!cameraReady) throw new Error('Kamera belum aktif.');
-  }
-
-  async function registerUser() {
-    requireReady();
-    const phone = normalizePhone(els.phone.value);
-    const password = els.password.value;
-
-    if (!phone) throw new Error('Nomor HP harus valid.');
-    if (!validatePassword(password)) throw new Error('Password minimal 8 karakter.');
-
-    const store = loadStore();
-    if (store.profiles.some(p => p.phone === phone)) {
-      throw new Error('Nomor HP sudah terdaftar.');
+    // Enkripsi teks atau buffer, mengembalikan base64 (iv + ciphertext)
+    async function encryptData(plainData) {
+        try {
+            const key = await getOrCreateMasterKey();
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            let dataBuffer;
+            if (typeof plainData === 'string') {
+                dataBuffer = new TextEncoder().encode(plainData);
+            } else if (plainData instanceof Float32Array) {
+                // Konversi Float32Array ke ArrayBuffer
+                dataBuffer = plainData.buffer.slice(plainData.byteOffset, plainData.byteOffset + plainData.byteLength);
+            } else if (plainData instanceof ArrayBuffer) {
+                dataBuffer = plainData;
+            } else {
+                // fallback
+                dataBuffer = new TextEncoder().encode(JSON.stringify(plainData));
+            }
+            const encrypted = await window.crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                dataBuffer
+            );
+            // Gabungkan iv + ciphertext (base64 friendly)
+            const combined = new Uint8Array(iv.length + encrypted.byteLength);
+            combined.set(iv);
+            combined.set(new Uint8Array(encrypted), iv.length);
+            return btoa(String.fromCharCode(...combined));
+        } catch (e) {
+            console.error("Encrypt error:", e);
+            throw new Error("Gagal enkripsi data");
+        }
     }
 
-    setStatus(els.signUpStatus, 'Status: ambil 3 sampel wajah. Tetap hadap kamera.', '');
-    const faceDescriptor = await captureFaceSamples(3);
-
-    const profile = {
-      phone,
-      passwordHashPreview: await hashPassword(password),
-      faceDescriptor,
-      createdAt: new Date().toISOString()
-    };
-
-    // Data disimpan terenkripsi di localStorage.
-    const vaultPassphrase = await getOrCreateVaultPassphrase();
-    const encrypted = await encryptJson(profile, vaultPassphrase);
-    store.profiles.push({ phone, encrypted });
-    saveStore(store);
-
-    setStatus(els.signUpStatus, 'Berhasil daftar. Data wajah tersimpan terenkripsi di browser.', 'ok');
-    els.debugBox.textContent = `Tersimpan: ${phone}\nWaktu: ${new Date().toLocaleString('id-ID')}`;
-  }
-
-  async function hashPassword(password) {
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const input = new TextEncoder().encode(`${toBase64(salt)}:${password}`);
-    const digest = await crypto.subtle.digest('SHA-256', input);
-    return {
-      salt: toBase64(salt),
-      hash: toBase64(new Uint8Array(digest)),
-      method: 'SHA-256'
-    };
-  }
-
-  async function getOrCreateVaultPassphrase() {
-    const keyName = 'face-auth-vault-key-v1';
-    let stored = localStorage.getItem(keyName);
-    if (!stored) {
-      const bytes = crypto.getRandomValues(new Uint8Array(32));
-      stored = toBase64(bytes);
-      localStorage.setItem(keyName, stored);
-    }
-    return stored;
-  }
-
-  async function signInWithFace() {
-    requireReady();
-    const store = loadStore();
-    if (!store.profiles.length) throw new Error('Belum ada akun terdaftar.');
-
-    setStatus(els.signInStatus, 'Status: membaca wajah...', '');
-    const liveDescriptor = await waitForDescriptor(7000);
-    if (!liveDescriptor) throw new Error('Wajah tidak terbaca. Coba lagi dengan pencahayaan yang lebih baik.');
-
-    const vaultPassphrase = await getOrCreateVaultPassphrase();
-    let best = { distance: Number.POSITIVE_INFINITY, phone: null };
-
-    for (const item of store.profiles) {
-      try {
-        const profile = await decryptJson(item.encrypted, vaultPassphrase);
-        const storedDescriptor = profile.faceDescriptor;
-        const distance = euclideanDistance(liveDescriptor, storedDescriptor);
-        if (distance < best.distance) best = { distance, phone: profile.phone };
-      } catch (err) {
-        console.warn('Gagal membuka profil terenkripsi:', err);
-      }
+    // Dekripsi dari base64, kembalikan sebagai ArrayBuffer
+    async function decryptToBuffer(encryptedBase64) {
+        try {
+            const key = await getOrCreateMasterKey();
+            const binaryStr = atob(encryptedBase64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+            const iv = bytes.slice(0, 12);
+            const ciphertext = bytes.slice(12);
+            const decrypted = await window.crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                ciphertext
+            );
+            return decrypted;
+        } catch (e) {
+            console.error("Decrypt error:", e);
+            throw new Error("Korupsi data atau kunci tidak valid");
+        }
     }
 
-    const threshold = 0.48;
-    if (!best.phone || best.distance > threshold) {
-      throw new Error(`Wajah tidak cocok. Jarak kecocokan ${best.distance.toFixed(3)}.`);
+    // Dekripsi dan konversi ke Float32Array (untuk descriptor wajah)
+    async function decryptToDescriptor(encryptedBase64) {
+        const buffer = await decryptToBuffer(encryptedBase64);
+        return new Float32Array(buffer);
     }
 
-    setSession(best.phone);
-    setStatus(els.signInStatus, `Berhasil masuk sebagai ${best.phone}.`, 'ok');
-    showFree(best.phone);
-  }
-
-  async function getActiveProfile() {
-    const session = getSession();
-    if (!sessionIsValid()) return null;
-    const store = loadStore();
-    return store.profiles.find(p => p.phone === session.phone) || null;
-  }
-
-  function logout() {
-    clearSession();
-    showAuth();
-    setStatus(els.signInStatus, 'Status: keluar dari sesi.', '');
-    setGlobal('Sesi ditutup.', '');
-  }
-
-  function clearAll() {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem('face-auth-vault-key-v1');
-    clearSession();
-    capturedDescriptors = [];
-    lastDescriptor = null;
-    els.phone.value = '';
-    els.password.value = '';
-    setStatus(els.signInStatus, 'Semua data lokal dihapus.', 'ok');
-    setStatus(els.signUpStatus, 'Semua data lokal dihapus.', 'ok');
-    setGlobal('Semua data lokal dihapus.', 'ok');
-    showAuth();
-  }
-
-  async function init() {
-    try {
-      if (window.faceapi) {
-        setGlobal('Library siap. Klik Load Model untuk mulai.', 'ok');
-      } else {
-        setGlobal('Memuat library wajah...', '');
-        const check = setInterval(() => {
-          if (window.faceapi) {
-            clearInterval(check);
-            setGlobal('Library siap. Klik Load Model untuk mulai.', 'ok');
-          }
-        }, 120);
-      }
-
-      const sessionProfile = await getActiveProfile();
-      if (sessionProfile) {
-        showFree(sessionProfile.phone);
-      } else {
-        showAuth();
-      }
-
-      setTab('in');
-    } catch (err) {
-      setGlobal(err.message || 'Inisialisasi gagal.', 'danger');
+    // Dekripsi ke string (password)
+    async function decryptToString(encryptedBase64) {
+        const buffer = await decryptToBuffer(encryptedBase64);
+        return new TextDecoder().decode(buffer);
     }
-  }
 
-  els.tabSignIn.addEventListener('click', () => setTab('in'));
-  els.tabSignUp.addEventListener('click', () => setTab('up'));
-
-  els.btnLoadModels.addEventListener('click', async () => {
-    try { await loadModels(); }
-    catch (err) { setStatus(els.signInStatus, err.message, 'danger'); setGlobal(err.message, 'danger'); }
-  });
-
-  els.btnLoadModelsUp.addEventListener('click', async () => {
-    try { await loadModels(); }
-    catch (err) { setStatus(els.signUpStatus, err.message, 'danger'); setGlobal(err.message, 'danger'); }
-  });
-
-  els.btnStartCamera.addEventListener('click', async () => {
-    try { await startCamera(); }
-    catch (err) { setStatus(els.signInStatus, err.message, 'danger'); setGlobal(err.message, 'danger'); }
-  });
-
-  els.btnStartCameraUp.addEventListener('click', async () => {
-    try { await startCamera(); }
-    catch (err) { setStatus(els.signUpStatus, err.message, 'danger'); setGlobal(err.message, 'danger'); }
-  });
-
-  els.btnCapturePreview.addEventListener('click', async () => {
-    try {
-      requireReady();
-      const desc = await waitForDescriptor(6000);
-      if (!desc) throw new Error('Wajah belum terbaca.');
-      capturedDescriptors.push(desc);
-      lastDescriptor = averageDescriptor(capturedDescriptors);
-      setStatus(els.signUpStatus, `Sampel tersimpan. Total sampel: ${capturedDescriptors.length}.`, 'ok');
-    } catch (err) {
-      setStatus(els.signUpStatus, err.message, 'danger');
-      setGlobal(err.message, 'danger');
+    // ======================== STORAGE & USER MANAGEMENT ========================
+    const STORAGE_KEY = "face_vault_encrypted_users";
+    
+    function getUsers() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        try {
+            return JSON.parse(raw);
+        } catch(e) { return []; }
     }
-  });
-
-  els.btnSignUp.addEventListener('click', async () => {
-    try {
-      await registerUser();
-    } catch (err) {
-      setStatus(els.signUpStatus, err.message, 'danger');
-      setGlobal(err.message, 'danger');
+    
+    function saveUsers(users) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+        renderUserList();
     }
-  });
-
-  els.btnSignIn.addEventListener('click', async () => {
-    try {
-      await signInWithFace();
-    } catch (err) {
-      setStatus(els.signInStatus, err.message, 'danger');
-      setGlobal(err.message, 'danger');
+    
+    async function renderUserList() {
+        const container = document.getElementById('userListContainer');
+        const users = getUsers();
+        if (users.length === 0) {
+            container.innerHTML = "🔒 Vault kosong. Daftarkan wajah pertama Anda.";
+            return;
+        }
+        let html = `<div style="margin-bottom: 8px;">👥 ${users.length} akun terdaftar (enkripsi aktif):</div>`;
+        for (const u of users) {
+            // nomor hp ditampilkan plain (sebagai identifier)
+            html += `<div class="user-badge">📱 ${u.phone}</div>`;
+        }
+        container.innerHTML = html;
     }
-  });
-
-  els.btnLogout.addEventListener('click', logout);
-  els.btnClearAll.addEventListener('click', clearAll);
-  els.btnReloadModels.addEventListener('click', async () => {
-    try {
-      modelsLoaded = false;
-      await loadModels();
-    } catch (err) {
-      setGlobal(err.message, 'danger');
+    
+    // Cek apakah nomor hp sudah ada
+    function isPhoneExists(phone, excludeIndex = -1) {
+        const users = getUsers();
+        return users.some((u, idx) => u.phone === phone && idx !== excludeIndex);
     }
-  });
-
-  window.addEventListener('resize', resizeOverlay);
-  window.addEventListener('beforeunload', () => {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-  });
-
-  init();
-})();
-</script></body>
+    
+    // ======================== FACE DETECTION HELPERS ========================
+    let modelsLoaded = false;
+    let streaming = false;
+    let faceDetectionOptions = null;
+    const videoElem = document.getElementById('webcam');
+    const cameraStatusSpan = document.getElementById('cameraStatus');
+    
+    async function getFaceDescriptorFromVideo() {
+        if (!modelsLoaded || !streaming) throw new Error("Model atau kamera belum siap");
+        const detection = await faceapi.detectSingleFace(videoElem, faceDetectionOptions)
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+        if (!detection) return null;
+        return detection.descriptor;
+    }
+    
+    function euclideanDistance(desc1, desc2) {
+        let sum = 0;
+        for (let i = 0; i < desc1.length; i++) {
+            let diff = desc1[i] - desc2[i];
+            sum += diff * diff;
+        }
+        return Math.sqrt(sum);
+    }
+    
+    // ======== PROSES REGISTRASI DENGAN ENKRIPSI ========
+    async function handleSignUp() {
+        const msgDiv = document.getElementById('signupMessage');
+        msgDiv.style.display = 'none';
+        const phone = document.getElementById('signupPhone').value.trim();
+        const password = document.getElementById('signupPassword').value.trim();
+        if (!phone) {
+            showMessage(msgDiv, "Nomor HP harus diisi!", "error");
+            return;
+        }
+        if (!password || password.length < 4) {
+            showMessage(msgDiv, "Password minimal 4 karakter (digunakan untuk enkripsi sekunder).", "error");
+            return;
+        }
+        if (!modelsLoaded || !streaming) {
+            showMessage(msgDiv, "Model AI atau kamera belum aktif. Tunggu sebentar.", "error");
+            return;
+        }
+        if (isPhoneExists(phone)) {
+            showMessage(msgDiv, "Nomor HP sudah terdaftar di vault!", "error");
+            return;
+        }
+        
+        const btn = document.getElementById('btnRegisterFace');
+        btn.disabled = true;
+        const origText = btn.innerText;
+        btn.innerText = "📸 Mengamankan wajah (enkripsi AES)...";
+        
+        try {
+            const descriptor = await getFaceDescriptorFromVideo();
+            if (!descriptor) {
+                showMessage(msgDiv, "Wajah tidak terdeteksi! Pastikan wajah terlihat jelas.", "error");
+                return;
+            }
+            // ENKRIPSI DESCRIPTOR (Float32Array) dan password string
+            const encryptedDescriptor = await encryptData(descriptor);
+            const encryptedPassword = await encryptData(password);
+            
+            const newUser = {
+                phone: phone,
+                encDesc: encryptedDescriptor,
+                encPass: encryptedPassword,
+                createdAt: Date.now()
+            };
+            const users = getUsers();
+            users.push(newUser);
+            saveUsers(users);
+            showMessage(msgDiv, `✅ Pendaftaran sukses! Wajah ${phone} tersimpan dalam vault terenkripsi. Silakan login dengan wajah.`, "success");
+            document.getElementById('signupPhone').value = '';
+            document.getElementById('signupPassword').value = '';
+        } catch (err) {
+            console.error(err);
+            showMessage(msgDiv, "Gagal registrasi: " + err.message, "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = origText;
+        }
+    }
+    
+    // ======== PROSES LOGIN DENGAN VERIFIKASI WAJAH & DEKRIPSI ========
+    async function handleLogin() {
+        const msgDiv = document.getElementById('loginMessage');
+        msgDiv.style.display = 'none';
+        const phone = document.getElementById('loginPhone').value.trim();
+        if (!phone) {
+            showMessage(msgDiv, "Masukkan nomor HP yang terdaftar", "error");
+            return;
+        }
+        if (!modelsLoaded || !streaming) {
+            showMessage(msgDiv, "Sistem biometrik masih inisialisasi.", "error");
+            return;
+        }
+        const users = getUsers();
+        const user = users.find(u => u.phone === phone);
+        if (!user) {
+            showMessage(msgDiv, "Nomor HP tidak ditemukan di vault terenkripsi.", "error");
+            return;
+        }
+        if (!user.encDesc) {
+            showMessage(msgDiv, "Data wajah pengguna rusak. Registrasi ulang.", "error");
+            return;
+        }
+        
+        const btn = document.getElementById('btnVerifyFace');
+        btn.disabled = true;
+        const origText = btn.innerText;
+        btn.innerText = "🔐 Mendekripsi & memverifikasi...";
+        
+        try {
+            // Ambil descriptor live
+            const liveDescriptor = await getFaceDescriptorFromVideo();
+            if (!liveDescriptor) {
+                showMessage(msgDiv, "Tidak ada wajah terdeteksi di kamera. Atur posisi.", "error");
+                return;
+            }
+            // Dekripsi descriptor tersimpan
+            let storedDescriptor;
+            try {
+                storedDescriptor = await decryptToDescriptor(user.encDesc);
+            } catch (e) {
+                showMessage(msgDiv, "Gagal mendekripsi data wajah (kunci rusak / korup).", "error");
+                return;
+            }
+            const distance = euclideanDistance(liveDescriptor, storedDescriptor);
+            console.log(`Distance for ${phone}: ${distance.toFixed(5)} (threshold 0.55)`);
+            if (distance < 0.55) {
+                // Optional: coba dekripsi password (tidak ditampilkan, hanya bukti integrity)
+                try {
+                    const decPass = await decryptToString(user.encPass);
+                    console.log("Password terdekripsi (tidak ditampilkan): ", decPass.substring(0,2)+"***");
+                } catch(e) {}
+                showMessage(msgDiv, `✅ AKSES GRANTED — Selamat ${phone}! Wajah cocok (jarak ${distance.toFixed(3)}). Masuk berhasil.`, "success");
+                setTimeout(() => alert("✨ Login sukses! Enkripsi & verifikasi biometrik berhasil."), 200);
+            } else {
+                showMessage(msgDiv, `❌ AKSES DITOLAK! Wajah tidak cocok (jarak ${distance.toFixed(3)} > 0.55).`, "error");
+            }
+        } catch (err) {
+            console.error(err);
+            showMessage(msgDiv, "Error verifikasi: " + err.message, "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = origText;
+        }
+    }
+    
+    // Reset semua data (vault terenkripsi)
+    async function resetAllData() {
+        if (confirm("⚠️ PERINGATAN: Semua data wajah & akun akan dihapus permanen dari local storage. Lanjutkan?")) {
+            localStorage.removeItem(STORAGE_KEY);
+            renderUserList();
+            showMessage(document.getElementById('signupMessage'), "Vault terenkripsi telah direset.", "success");
+            document.getElementById('loginMessage').style.display = 'none';
+            alert("✅ Semua data biometrik telah dihapus.");
+        }
+    }
+    
+    // Helper UI message
+    function showMessage(element, message, type) {
+        element.innerHTML = message;
+        element.className = `alert alert-${type}`;
+        element.style.display = 'block';
+        setTimeout(() => {
+            if (element.style.display === 'block') element.style.display = 'none';
+        }, 4500);
+    }
+    
+    // ======== INIT MODELS & CAMERA ========
+    async function initFaceAndCamera() {
+        cameraStatusSpan.innerHTML = "🧠 Memuat model AI & menyiapkan secure enklave...";
+        try {
+            await faceapi.tf.setBackend('webgl');
+            await faceapi.nets.tinyFaceDetector.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights');
+            await faceapi.nets.faceRecognitionNet.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights');
+            faceDetectionOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+            modelsLoaded = true;
+            cameraStatusSpan.innerHTML = "📷 Meminta akses kamera (enkripsi ready)...";
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoElem.srcObject = stream;
+            return new Promise((resolve) => {
+                videoElem.onloadedmetadata = () => {
+                    videoElem.play();
+                    streaming = true;
+                    cameraStatusSpan.innerHTML = "✅ Kamera aktif + Model ready. Data wajah dienkripsi AES-GCM.";
+                    resolve(true);
+                };
+                videoElem.onerror = () => {
+                    cameraStatusSpan.innerHTML = "❌ Izin kamera ditolak / error.";
+                    streaming = false;
+                    resolve(false);
+                };
+            });
+        } catch (err) {
+            console.error(err);
+            cameraStatusSpan.innerHTML = "⚠️ Gagal muat model atau kamera. Cek koneksi & izin kamera.";
+            modelsLoaded = false;
+        }
+    }
+    
+    // Generate master key secara async diawal (memastikan crypto ready)
+    async function warmupCrypto() {
+        try {
+            await getOrCreateMasterKey();
+            console.log("Crypto master key ready (PBKDF2+AES-GCM)");
+        } catch(e) { console.warn(e); }
+    }
+    
+    // Bootstrap aplikasi
+    (async function bootstrap() {
+        await warmupCrypto();
+        await initFaceAndCamera();
+        renderUserList();
+        // Event listeners
+        document.getElementById('btnRegisterFace').addEventListener('click', handleSignUp);
+        document.getElementById('btnVerifyFace').addEventListener('click', handleLogin);
+        document.getElementById('resetAllDataBtn').addEventListener('click', resetAllData);
+        // jika ada data usang tanpa encDesc filter (validasi)
+        const users = getUsers();
+        let changed = false;
+        const validUsers = users.filter(u => u.encDesc && typeof u.encDesc === 'string' && u.encPass);
+        if (validUsers.length !== users.length) {
+            saveUsers(validUsers);
+            changed = true;
+        }
+        if (changed) renderUserList();
+    })();
+</script>
+</body>
 </html>

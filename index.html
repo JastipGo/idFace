@@ -185,6 +185,31 @@
         .btn-danger:hover { background: var(--danger); color: white; }
 
         .text-right { text-align: right; }
+
+        /* Analisa Section */
+        .analisa-grid {
+            display: flex; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+            margin-bottom: 20px;
+        }
+        .analisa-item {
+            flex: 1; 
+            min-width: 200px;
+        }
+        .analisa-label {
+            font-size: 13px; 
+            color: var(--text-muted); 
+            font-weight: 600;
+        }
+        .analisa-result {
+            background: #f8fafc; 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid var(--border);
+            font-size: 15px; 
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
@@ -207,6 +232,41 @@
         <div class="card">
             <div class="card-title">Saldo Akhir <span class="badge-today" style="background:#e0e7ff">Total</span></div>
             <div class="card-value val-primary" id="totSaldo">Rp 0</div>
+        </div>
+    </div>
+
+    <!-- FITUR BARU: Analisa Pencapaian Target -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h2>Analisa Pencapaian Target</h2>
+        </div>
+        <div class="analisa-grid">
+            <div class="analisa-item">
+                <label class="analisa-label">Target Tabungan</label>
+                <select id="analisaTarget" class="filter-select" style="width: 100%; margin-top: 8px;" onchange="hitungAnalisa()">
+                    <option value="6000000">Rp 6.000.000</option>
+                    <option value="7000000">Rp 7.000.000</option>
+                    <option value="8000000">Rp 8.000.000</option>
+                </select>
+            </div>
+            <div class="analisa-item">
+                <label class="analisa-label">Pendapatan / Hari</label>
+                <select id="analisaPendapatan" class="filter-select" style="width: 100%; margin-top: 8px;" onchange="hitungAnalisa()">
+                    <option value="100000">Rp 100.000</option>
+                    <option value="130000">Rp 130.000</option>
+                </select>
+            </div>
+            <div class="analisa-item">
+                <label class="analisa-label">Waktu Kerja</label>
+                <select id="analisaKerja" class="filter-select" style="width: 100%; margin-top: 8px;" onchange="hitungAnalisa()">
+                    <option value="7">Tanpa Libur</option>
+                    <option value="6">Libur 1x Seminggu (Minggu)</option>
+                    <option value="5">Libur 2x Seminggu (Sabtu & Minggu)</option>
+                </select>
+            </div>
+        </div>
+        <div class="analisa-result" id="hasilAnalisa">
+            Menunggu kalkulasi...
         </div>
     </div>
 
@@ -266,12 +326,65 @@
         dataKeuangan[idx][field] = rawValue;
     };
 
-    // Fungsi utilitas untuk mendapat hari Senin di minggu suatu tanggal
     const getStartOfWeek = (date) => {
         const d = new Date(date);
         const day = d.getDay();
         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         return new Date(d.setDate(diff));
+    };
+
+    // Fungsi Kalkulasi Analisa Target
+    window.hitungAnalisa = () => {
+        // Hitung Saldo Akhir saat ini
+        let currentSaldo = dataKeuangan.reduce((sum, item) => {
+            return sum + (parseFloat(item.pendapatan) || 0) - (parseFloat(item.pengeluaran) || 0);
+        }, 0);
+
+        const target = parseFloat(document.getElementById('analisaTarget').value);
+        const pendapatanPerHari = parseFloat(document.getElementById('analisaPendapatan').value);
+        const hariKerja = parseInt(document.getElementById('analisaKerja').value);
+        
+        const divHasil = document.getElementById('hasilAnalisa');
+        let sisaTarget = target - currentSaldo;
+
+        if (sisaTarget <= 0) {
+            divHasil.innerHTML = `<strong>🎉 Selamat!</strong> Saldo Anda saat ini (<strong class="val-success">${formatRp(currentSaldo)}</strong>) sudah mencapai atau melebihi target ${formatRp(target)}.`;
+            return;
+        }
+
+        let hariKerjaDibutuhkan = 0;
+        let totalHariKalender = 0;
+        let tanggalEstimasi = new Date(); // Mulai dari hari ini
+
+        // Simulasi hari per hari untuk hasil yang akurat
+        let sisaHitung = sisaTarget;
+        while (sisaHitung > 0) {
+            tanggalEstimasi.setDate(tanggalEstimasi.getDate() + 1);
+            totalHariKalender++;
+            
+            let dayOfWeek = tanggalEstimasi.getDay(); // 0 = Minggu, 1 = Senin, ..., 6 = Sabtu
+            let isKerja = true;
+
+            // Logika Libur
+            if (hariKerja === 6 && dayOfWeek === 0) {
+                isKerja = false; // Libur 1x (Minggu)
+            } else if (hariKerja === 5 && (dayOfWeek === 0 || dayOfWeek === 6)) {
+                isKerja = false; // Libur 2x (Sabtu & Minggu)
+            }
+
+            if (isKerja) {
+                sisaHitung -= pendapatanPerHari;
+                hariKerjaDibutuhkan++;
+            }
+        }
+
+        const optionsTanggal = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        
+        divHasil.innerHTML = `
+            Sisa target yang harus dikumpulkan: <strong class="val-danger">${formatRp(sisaTarget)}</strong><br><br>
+            ⏳ Anda membutuhkan <strong>${hariKerjaDibutuhkan} hari kerja</strong> aktif (total <strong>${totalHariKalender} hari kalender</strong> termasuk hari libur Anda).<br>
+            🎯 Estimasi target akan tercapai pada: <strong class="val-primary">${tanggalEstimasi.toLocaleDateString('id-ID', optionsTanggal)}</strong>
+        `;
     };
 
     function processChartData(dataUrutWaktu) {
@@ -281,7 +394,7 @@
         const today = new Date();
         today.setHours(23, 59, 59, 999);
 
-        let startDate = new Date(0); // Default ke awal waktu jika 'semua'
+        let startDate = new Date(0); 
 
         if (rangeFilter === 'minggu') {
             startDate = getStartOfWeek(today);
@@ -292,10 +405,7 @@
             startDate = new Date(today.getFullYear(), 0, 1);
         }
 
-        // 1. Filter Rentang Data
         const filteredData = dataUrutWaktu.filter(item => new Date(item.tanggal) >= startDate);
-
-        // 2. Grouping Data
         const groupedMap = new Map();
 
         filteredData.forEach(item => {
@@ -311,8 +421,6 @@
                 label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
             }
 
-            // Karena data sudah urut dari lama ke baru, set akan menimpa saldo sebelumnya
-            // Artinya kita mendapatkan saldo AKHIR di hari/minggu/bulan tersebut
             groupedMap.set(label, item.tempSaldo);
         });
 
@@ -368,8 +476,8 @@
         document.getElementById('totPengeluaranHariIni').innerText = formatRp(totalPengeluaranHariIni);
         document.getElementById('totSaldo').innerText = formatRp(dataUrutWaktu.length > 0 ? dataUrutWaktu[dataUrutWaktu.length - 1].tempSaldo : 0);
 
-        // Update Chart sesuai Filter
         processChartData(dataUrutWaktu);
+        hitungAnalisa(); // Panggil fungsi kalkulasi target otomatis setelah merender UI
         
         localStorage.setItem('finance_db_v3', JSON.stringify(dataKeuangan));
     }
